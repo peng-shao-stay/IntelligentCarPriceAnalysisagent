@@ -20,19 +20,19 @@
 --   rag     — 知识库（文档、分块、向量嵌入）
 --   ops     — 运维日志（工具调用、RAG摄入、RAG检索）
 --
--- 表清单（11 张）：
---   app.users               用户
---   app.chat_sessions       聊天会话
---   app.chat_messages       聊天消息
---   app.car_price_snapshots 汽车价格快照
---   app.news_articles       新闻文章
---   app.mcp_server_configs   MCP 服务器配置（由 ORM 自动创建）
---   rag.rag_documents       知识库文档
---   rag.rag_chunks          文档分块
---   rag.rag_chunk_embeddings 向量嵌入（1536维）
---   ops.tool_call_logs      工具调用日志
---   ops.rag_ingestion_jobs  RAG 摄入任务
---   ops.rag_retrieval_logs  RAG 检索日志
+-- 表清单（13 张）：
+--   app.users                用户
+--   app.chat_sessions        聊天会话
+--   app.chat_messages        聊天消息
+--   app.car_price_snapshots  汽车价格快照
+--   app.news_articles        新闻文章
+--   app.mcp_server_configs   MCP 服务器配置
+--   rag.rag_documents        知识库文档
+--   rag.rag_chunks           文档分块
+--   rag.rag_chunk_embeddings 向量嵌入（1024维）
+--   ops.tool_call_logs       工具调用日志
+--   ops.rag_ingestion_jobs   RAG 摄入任务（预留）
+--   ops.rag_retrieval_logs   RAG 检索日志（预留）
 --
 -- 设计约定：
 --   - 所有表使用逻辑删除（is_deleted），不物理删除数据
@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS app.users (
     username VARCHAR(100) NOT NULL,
     email VARCHAR(255),
     password_hash TEXT,
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     profile JSONB NOT NULL DEFAULT '{}'::jsonb,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -105,7 +106,7 @@ EXECUTE FUNCTION public.set_updated_at();
 CREATE TABLE IF NOT EXISTS app.chat_sessions (
     id BIGSERIAL PRIMARY KEY,
     session_id VARCHAR(100) NOT NULL,
-    user_id BIGINT REFERENCES app.users(id) ON DELETE SET NULL,
+    user_id BIGINT NOT NULL REFERENCES app.users(id) ON DELETE CASCADE,
     title VARCHAR(200),
     summary TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -297,6 +298,47 @@ EXECUTE FUNCTION public.set_updated_at();
 
 
 -- =========================================================
+-- app.mcp_server_configs
+-- =========================================================
+CREATE TABLE IF NOT EXISTS app.mcp_server_configs (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500) NOT NULL DEFAULT '',
+    transport VARCHAR(20) NOT NULL DEFAULT 'http',
+    base_url VARCHAR(500) NOT NULL DEFAULT '',
+    command VARCHAR(500) NOT NULL DEFAULT '',
+    env_vars JSONB NOT NULL DEFAULT '{}'::jsonb,
+    auth_type VARCHAR(20) NOT NULL DEFAULT 'none',
+    auth_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    tool_schemas JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    is_essential BOOLEAN NOT NULL DEFAULT FALSE,
+    timeout_seconds INT NOT NULL DEFAULT 30,
+    max_retries INT NOT NULL DEFAULT 2,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (transport IN ('http', 'stdio', 'sse')),
+    CHECK (auth_type IN ('none', 'bearer', 'api_key', 'oauth2'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mcp_server_configs_name_active
+ON app.mcp_server_configs(name)
+WHERE is_deleted = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_mcp_server_configs_enabled_active
+ON app.mcp_server_configs(is_enabled)
+WHERE is_deleted = FALSE;
+
+DROP TRIGGER IF EXISTS trg_mcp_server_configs_set_updated_at ON app.mcp_server_configs;
+CREATE TRIGGER trg_mcp_server_configs_set_updated_at
+BEFORE UPDATE ON app.mcp_server_configs
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_at();
+
+
+-- =========================================================
 -- rag.rag_documents
 -- =========================================================
 CREATE TABLE IF NOT EXISTS rag.rag_documents (
@@ -344,6 +386,8 @@ CREATE TABLE IF NOT EXISTS rag.rag_chunks (
     id BIGSERIAL PRIMARY KEY,
     document_id BIGINT NOT NULL REFERENCES rag.rag_documents(id) ON DELETE CASCADE,
     chunk_index INT NOT NULL,
+    chunk_id VARCHAR(200),
+    chunk_type VARCHAR(20) NOT NULL DEFAULT 'model',
     content TEXT NOT NULL,
     token_count INT,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -373,13 +417,13 @@ EXECUTE FUNCTION public.set_updated_at();
 
 -- =========================================================
 -- rag.rag_chunk_embeddings
--- 当前向量维度：1536
+-- 当前向量维度：1024
 -- =========================================================
 CREATE TABLE IF NOT EXISTS rag.rag_chunk_embeddings (
     id BIGSERIAL PRIMARY KEY,
     chunk_id BIGINT NOT NULL REFERENCES rag.rag_chunks(id) ON DELETE CASCADE,
     embedding_model VARCHAR(100) NOT NULL,
-    embedding VECTOR(1536) NOT NULL,
+    embedding VECTOR(1024) NOT NULL,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMPTZ,

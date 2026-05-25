@@ -121,6 +121,30 @@ class NewsArticle(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
+class MCPServerConfig(Base):
+    __tablename__ = "mcp_server_configs"
+    __table_args__ = {"schema": "app"}
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    description = Column(String(500), default="")
+    transport = Column(String(20), nullable=False, default="http")
+    base_url = Column(String(500), default="")
+    command = Column(String(500), default="")
+    env_vars = Column(JSON, nullable=False, default=dict)
+    auth_type = Column(String(20), nullable=False, default="none")
+    auth_config = Column(JSON, nullable=False, default=dict)
+    tool_schemas = Column(JSON, nullable=False, default=list)
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    is_essential = Column(Boolean, nullable=False, default=False)
+    timeout_seconds = Column(Integer, nullable=False, default=30)
+    max_retries = Column(Integer, nullable=False, default=2)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+
+
 # ============================================================
 # ops schema tables
 # ============================================================
@@ -138,6 +162,46 @@ class ToolCallLog(Base):
     status = Column(String(20), nullable=False, default="success")
     error_text = Column(Text)
     latency_ms = Column(Integer)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+
+
+class RagIngestionJob(Base):
+    """RAG document ingestion job log (reserved for future use)."""
+    __tablename__ = "rag_ingestion_jobs"
+    __table_args__ = {"schema": "ops"}
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    document_id = Column(BigInteger, ForeignKey("rag.rag_documents.id", ondelete="CASCADE"))
+    source_type = Column(String(50))
+    status = Column(String(20), nullable=False, default="pending")
+    step = Column(String(50))
+    error_text = Column(Text)
+    started_at = Column(DateTime(timezone=True))
+    finished_at = Column(DateTime(timezone=True))
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+
+
+class RagRetrievalLog(Base):
+    """RAG retrieval query log (reserved for future use)."""
+    __tablename__ = "rag_retrieval_logs"
+    __table_args__ = {"schema": "ops"}
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    session_id = Column(String(100), ForeignKey("app.chat_sessions.session_id"))
+    query_text = Column(Text, nullable=False)
+    retrieval_strategy = Column(String(50), nullable=False, default="vector")
+    top_k = Column(Integer, nullable=False, default=5)
+    filters = Column(JSON, nullable=False, default=dict)
+    results = Column(JSON, nullable=False, default=list)
+    latency_ms = Column(Integer)
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict)
     is_deleted = Column(Boolean, nullable=False, default=False)
     deleted_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
