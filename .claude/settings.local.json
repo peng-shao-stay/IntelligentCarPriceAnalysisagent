@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from pgvector.sqlalchemy import Vector; print\\('pgvector OK'\\)\")"
+    ]
+  }
+}

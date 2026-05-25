@@ -1,0 +1,50 @@
+# FastAPI 及核心依赖
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+pydantic[email]>=2.5.0  # 邮箱验证支持
+
+# 数据库
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0  # PostgreSQL 驱动
+redis>=5.0.0  # Redis 缓存
+
+# LangChain & LLM
+langchain>=0.1.0
+langchain-core>=0.1.0  # 核心消息类型
+langchain-openai>=0.0.5
+langchain-community>=0.0.10  # 包含 Ollama 和 Tavily 支持
+langchain-tavily>=0.1.0
+
+# HTTP 请求
+requests>=2.31.0
+httpx>=0.26.0
+
+# 日志
+loguru>=0.7.2
+
+# 数据处理
+python-dotenv>=1.0.0
+tabulate>=0.9.0  # 表格美化
+Pillow>=10.0.0  # 图片处理（验证码生成）
+
+# 爬虫相关
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
+# 向量数据库
+pgvector>=0.3.0
+
+# 文档解析
+pypdf>=5.0.0
+markdown>=3.7.0
+tiktoken>=0.8.0
+
+# 认证
+passlib[bcrypt]>=1.7.4
+PyJWT>=2.8.0
+
+# 测试
+pytest>=7.4.0
+pytest-asyncio>=0.23.0

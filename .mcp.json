@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp",
+      "headers": {
+        "Authorization": "输入Github的Token，格式为：Bearer <token>"
+      }
+    },
+    "github-modelscope": {
+      "type": "streamable-http",
+      "url": "https://mcp.api-inference.modelscope.net/b43bd96cdc8e40/mcp"
+    }
+  }
+}
