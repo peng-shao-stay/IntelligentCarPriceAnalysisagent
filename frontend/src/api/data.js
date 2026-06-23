@@ -4,6 +4,8 @@ export const fetchDataList = (params) => api.get('/data/list', { params })
 
 export const fetchBrands = () => api.get('/data/brands')
 
+export const fetchChunkTypes = () => api.get('/data/chunk-types')
+
 export const getDataItem = (id) => api.get(`/data/${id}`)
 
 export const updateDataItem = (id, data) => api.put(`/data/${id}`, data)

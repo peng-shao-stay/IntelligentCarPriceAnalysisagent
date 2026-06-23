@@ -1,30 +1,28 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   Table, Input, Select, Button, Space, Tag, Modal,
-  Form, InputNumber, message, Popconfirm, Empty, Spin, Card,
-  Row, Col,
+  Form, message, Popconfirm, Empty, Spin, Card,
+  Row, Col, Typography,
 } from 'antd'
 import {
   SearchOutlined, ReloadOutlined, DeleteOutlined,
   EditOutlined, EyeOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import {
-  fetchDataList, fetchBrands, getDataItem,
-  updateDataItem, deleteDataItem, batchDeleteItems,
+  fetchDataList, fetchBrands, fetchChunkTypes,
+  getDataItem, updateDataItem, deleteDataItem, batchDeleteItems,
 } from '../api/data'
 import '../styles/DataListPage.css'
 
-const TREND_COLORS = { up: 'green', down: 'red', stable: 'blue' }
-const TREND_LABELS = { up: '上涨', down: '下跌', stable: '持平' }
-const TREND_OPTIONS = [
-  { label: '上涨', value: 'up' },
-  { label: '下跌', value: 'down' },
-  { label: '持平', value: 'stable' },
-]
+const CHUNK_TYPE_LABELS = {
+  brand: '品牌概述', model: '车型', feature: '特性', comparison: '对比',
+}
+const CHUNK_TYPE_COLORS = {
+  brand: 'purple', model: 'blue', feature: 'green', comparison: 'orange',
+}
 
-function formatPrice(val, currency) {
-  const symbol = currency === 'USD' ? '$' : '¥'
-  return `${symbol}${val != null ? Number(val).toLocaleString() : '-'}`
+function formatPriceRange(val) {
+  return val || '-'
 }
 
 function DataListPage() {
@@ -39,8 +37,9 @@ function DataListPage() {
   // 筛选状态
   const [keyword, setKeyword] = useState('')
   const [brandFilter, setBrandFilter] = useState('')
-  const [trendFilter, setTrendFilter] = useState('')
+  const [chunkTypeFilter, setChunkTypeFilter] = useState('')
   const [brands, setBrands] = useState([])
+  const [chunkTypes, setChunkTypes] = useState([])
 
   // 分页和排序
   const [page, setPage] = useState(1)
@@ -72,13 +71,22 @@ function DataListPage() {
     }
   }, [])
 
+  const loadChunkTypes = useCallback(async () => {
+    try {
+      const list = await fetchChunkTypes()
+      setChunkTypes(list)
+    } catch {
+      // 区块类型列表加载失败不影响主列表
+    }
+  }, [])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const result = await fetchDataList({
         page, page_size: pageSize, keyword,
-        brand: brandFilter, trend: trendFilter,
+        brand: brandFilter, chunk_type: chunkTypeFilter,
         sort_field: sortField, sort_order: sortOrder,
       })
       setData(result.items)
@@ -90,7 +98,7 @@ function DataListPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, pageSize, keyword, brandFilter, trendFilter, sortField, sortOrder])
+  }, [page, pageSize, keyword, brandFilter, chunkTypeFilter, sortField, sortOrder])
 
   useEffect(() => {
     loadData()
@@ -98,6 +106,7 @@ function DataListPage() {
 
   useEffect(() => {
     loadBrands()
+    loadChunkTypes()
   }, [])
 
   const handleSearch = () => {
@@ -107,7 +116,7 @@ function DataListPage() {
   const handleReset = () => {
     setKeyword('')
     setBrandFilter('')
-    setTrendFilter('')
+    setChunkTypeFilter('')
     setPage(1)
   }
 
@@ -191,65 +200,68 @@ function DataListPage() {
     {
       title: 'ID',
       dataIndex: 'id',
-      width: 80,
+      width: 70,
       sorter: true,
       responsive: ['md'],
     },
     {
       title: '品牌',
       dataIndex: 'brand_name',
-      width: 120,
-      sorter: true,
+      width: 100,
       ellipsis: true,
     },
     {
       title: '车型',
       dataIndex: 'model_name',
-      width: 180,
+      width: 150,
       ellipsis: true,
     },
     {
-      title: '版本',
-      dataIndex: 'version_name',
-      width: 150,
+      title: '区块类型',
+      dataIndex: 'chunk_type',
+      width: 100,
+      render: (t) => t ? <Tag color={CHUNK_TYPE_COLORS[t] || 'default'}>{CHUNK_TYPE_LABELS[t] || t}</Tag> : '-',
+    },
+    {
+      title: '区块标识',
+      dataIndex: 'chunk_id',
+      width: 220,
       ellipsis: true,
       responsive: ['lg'],
     },
     {
-      title: '价格',
-      dataIndex: 'price',
-      width: 130,
-      sorter: true,
-      render: (val, record) => (
+      title: '价格区间',
+      dataIndex: 'price_range',
+      width: 120,
+      render: (val) => (
         <span style={{ fontWeight: 600, color: '#1677ff' }}>
-          {formatPrice(val, record.currency)}
+          {formatPriceRange(val)}
         </span>
       ),
     },
     {
-      title: '地区',
-      dataIndex: 'region',
-      width: 100,
+      title: '年份',
+      dataIndex: 'year',
+      width: 80,
       responsive: ['md'],
     },
     {
-      title: '趋势',
-      dataIndex: 'trend',
+      title: '智驾等级',
+      dataIndex: 'smart_drive',
       width: 90,
-      render: (trend) =>
-        trend ? <Tag color={TREND_COLORS[trend] || 'default'}>{TREND_LABELS[trend] || trend}</Tag> : '-',
+      render: (val) => val ? <Tag color="geekblue">{val}</Tag> : '-',
     },
     {
       title: '来源',
       dataIndex: 'source',
-      width: 100,
+      width: 90,
       ellipsis: true,
       responsive: ['lg'],
     },
     {
       title: '更新时间',
       dataIndex: 'updated_at',
-      width: 170,
+      width: 160,
       sorter: true,
       responsive: ['md'],
       render: (val) => val ? new Date(val).toLocaleString('zh-CN') : '-',
@@ -340,12 +352,12 @@ function DataListPage() {
             </Col>
             <Col xs={12} sm={6} md={4}>
               <Select
-                placeholder="趋势筛选"
-                value={trendFilter || undefined}
-                onChange={(v) => { setTrendFilter(v || ''); setPage(1) }}
+                placeholder="区块类型筛选"
+                value={chunkTypeFilter || undefined}
+                onChange={(v) => { setChunkTypeFilter(v || ''); setPage(1) }}
                 allowClear
                 style={{ width: '100%' }}
-                options={TREND_OPTIONS}
+                options={chunkTypes.map((t) => ({ label: CHUNK_TYPE_LABELS[t] || t, value: t }))}
               />
             </Col>
             <Col xs={24} sm={12} md={10}>
@@ -420,7 +432,7 @@ function DataListPage() {
                   emptyText: (
                     <Empty
                       description={
-                        keyword || brandFilter || trendFilter
+                        keyword || brandFilter || chunkTypeFilter
                           ? '没有匹配的数据，请调整筛选条件'
                           : '暂无数据'
                       }
@@ -443,7 +455,7 @@ function DataListPage() {
 
         {/* 编辑弹窗 */}
         <Modal
-          title="编辑数据"
+          title="编辑区块数据"
           open={editVisible}
           onOk={handleEditSubmit}
           onCancel={() => setEditVisible(false)}
@@ -465,68 +477,70 @@ function DataListPage() {
               </Col>
             </Row>
             <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="version_name" label="版本">
-                  <Input />
+              <Col span={8}>
+                <Form.Item name="chunk_type" label="区块类型">
+                  <Select options={Object.entries(CHUNK_TYPE_LABELS).map(([v, l]) => ({ label: l, value: v }))} />
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item name="price" label="价格" rules={[{ required: true, message: '请输入价格' }]}>
-                  <InputNumber min={0} style={{ width: '100%' }} precision={2} />
+              <Col span={8}>
+                <Form.Item name="price_range" label="价格区间">
+                  <Input placeholder="如 23-34万" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="year" label="年份">
+                  <Input placeholder="如 2024" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item name="currency" label="货币">
-                  <Select options={[
-                    { label: 'CNY (人民币)', value: 'CNY' },
-                    { label: 'USD (美元)', value: 'USD' },
-                  ]} />
+              <Col span={12}>
+                <Form.Item name="vehicle_type" label="车辆类型">
+                  <Input placeholder="如 SUV、轿车" />
                 </Form.Item>
               </Col>
-              <Col span={8}>
-                <Form.Item name="region" label="地区">
+              <Col span={12}>
+                <Form.Item name="source" label="来源">
                   <Input />
                 </Form.Item>
               </Col>
-              <Col span={8}>
-                <Form.Item name="trend" label="趋势">
-                  <Select allowClear options={TREND_OPTIONS} />
-                </Form.Item>
-              </Col>
             </Row>
-            <Form.Item name="source" label="来源">
-              <Input />
-            </Form.Item>
           </Form>
         </Modal>
 
         {/* 详情弹窗 */}
         <Modal
-          title="数据详情"
+          title="区块详情"
           open={detailVisible}
           onCancel={() => setDetailVisible(false)}
           footer={<Button onClick={() => setDetailVisible(false)}>关闭</Button>}
-          width={560}
+          width={640}
         >
           {detailItem && (
             <div className="detail-grid">
               {[
+                ['区块ID', detailItem.id],
                 ['品牌', detailItem.brand_name],
                 ['车型', detailItem.model_name],
-                ['版本', detailItem.version_name],
-                ['价格', formatPrice(detailItem.price, detailItem.currency)],
-                ['货币', detailItem.currency],
-                ['地区', detailItem.region],
-                ['趋势', detailItem.trend],
+                ['区块类型', detailItem.chunk_type ? (CHUNK_TYPE_LABELS[detailItem.chunk_type] || detailItem.chunk_type) : '-'],
+                ['区块标识', detailItem.chunk_id],
+                ['区块序号', detailItem.chunk_index],
+                ['价格区间', detailItem.price_range],
+                ['年份', detailItem.year],
+                ['车辆类型', detailItem.vehicle_type],
+                ['动力类型', Array.isArray(detailItem.power_type) ? detailItem.power_type.join('、') : detailItem.power_type],
+                ['智驾等级', detailItem.smart_drive],
                 ['来源', detailItem.source],
+                ['Token数', detailItem.token_count],
+                ['内容摘要', detailItem.content],
                 ['创建时间', detailItem.created_at ? new Date(detailItem.created_at).toLocaleString('zh-CN') : '-'],
                 ['更新时间', detailItem.updated_at ? new Date(detailItem.updated_at).toLocaleString('zh-CN') : '-'],
-              ].map(([label, value]) => (
+              ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
                 <div key={label} className="detail-row">
                   <span className="detail-label">{label}</span>
-                  <span className="detail-value">{value || '-'}</span>
+                  <span className="detail-value" style={label === '内容摘要' ? { maxHeight: 120, overflow: 'auto', whiteSpace: 'pre-wrap' } : {}}>
+                    {typeof value === 'string' ? value : String(value)}
+                  </span>
                 </div>
               ))}
             </div>
