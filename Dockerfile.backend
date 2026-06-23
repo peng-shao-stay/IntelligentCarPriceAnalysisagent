@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: 构建依赖
 # ============================================
-FROM python:3.10-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 # ============================================
 # Stage 2: 运行时镜像
 # ============================================
-FROM python:3.10-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ RUN apt-get update && \
         && rm -rf /var/lib/apt/lists/*
 
 # 从构建阶段复制已安装的 Python 包
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # 复制应用代码
