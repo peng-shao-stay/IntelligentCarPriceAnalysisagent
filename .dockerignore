@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Frontend (not needed in backend image)
+frontend/
+frontend/node_modules/
+frontend/dist/
+
+# Git
+.git/
+.gitignore
+
+# Environment (injected at runtime)
+.env
+.env.local
+.env.production
+.env.docker
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Docs (not needed at runtime)
+docs/
+
+# Tests (not needed at runtime)
+tests/
+
+# Docker files themselves
+Dockerfile*
+docker-compose*
+.dockerignore
+nginx.conf
+
+# Redis binaries
+redis/
+
+# Crawler / MCP servers (not used at runtime)
+crawler/
+mcp_servers/
+
+# Skills / scratch / claude config
+skills/
+.scratch/
+.claude/
+.claude-plugin/
+.out-of-scope/
+
+# Node artifacts
+node_modules/
+package-lock.json

@@ -1,0 +1,20 @@
+# ============================================
+# AutoMind AI - 本地开发覆盖
+# 复制为 docker-compose.override.yml 使用
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+# docker-compose.override.yml 已在 .gitignore 中
+# ============================================
+
+services:
+  backend:
+    # 挂载源码实现热重载
+    volumes:
+      - ./:/app
+    environment:
+      DEBUG: "true"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    # 开发时不构建，通过 Vite 代理单独运行
+    # 注释掉以使用宿主机上的 npm run dev
+    # 如果需要前端热重载，可以直接运行 npm run dev
