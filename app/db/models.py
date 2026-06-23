@@ -43,7 +43,7 @@ class ChatSession(Base):
     __table_args__ = {"schema": "app"}
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    session_id = Column(String(100), nullable=False)
+    session_id = Column(String(100), nullable=False, unique=True)
     user_id = Column(BigInteger, ForeignKey("app.users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(200))
     summary = Column(Text)

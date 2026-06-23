@@ -104,7 +104,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_EXTERNAL_PORT:-80}:80"
+      - "${FRONTEND_EXTERNAL_PORT:-3000}:80"
 
 volumes:
   pgdata:
