@@ -43,7 +43,6 @@ tests/
 Dockerfile*
 docker-compose*
 .dockerignore
-nginx.conf
 
 # Redis binaries
 redis/
