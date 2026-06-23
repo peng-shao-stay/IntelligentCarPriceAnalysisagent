@@ -1,12 +1,14 @@
 # ============================================
-# AutoMind AI - 后端多阶段构建
-# ============================================
 # Stage 1: 构建依赖
+# ============================================
 FROM python:3.10-slim-bookworm AS builder
 
 WORKDIR /build
 
-# 安装编译工具（psycopg2 需要）
+# 加速 APT 源（bookworm 使用 debian.sources 文件）
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
+
+# 安装编译工具
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
@@ -15,16 +17,22 @@ RUN apt-get update && \
 
 # 安装 Python 依赖
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    -i https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --no-cache-dir -r requirements.txt \
+    -i https://mirrors.aliyun.com/pypi/simple/
 
 # ============================================
 # Stage 2: 运行时镜像
+# ============================================
 FROM python:3.10-slim-bookworm
 
 WORKDIR /app
 
-# 仅安装运行时库（psycopg2 需要 libpq）
+# 加速 APT 源
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
+
+# 安装运行时库（根据你构建日志，这里应该是 libpq5、curl 等）
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
@@ -39,7 +47,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY main.py .
 COPY app/ ./app/
 COPY requirements.txt .
-COPY schema.sql . 2>/dev/null || true
+COPY schema.sql .
 
 # 复制启动脚本
 COPY scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
