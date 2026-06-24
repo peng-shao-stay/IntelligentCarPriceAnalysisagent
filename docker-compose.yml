@@ -57,7 +57,7 @@ services:
         condition: service_healthy
     environment:
       # --- 数据库 & 缓存 ---
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-automind}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-automind}}
       REDIS_URL: redis://redis:6379/0
       REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-3600}
 

@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Float, ForeignKey,
     Boolean, BigInteger, Numeric, JSON, CheckConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 from app.db.database import Base
@@ -16,10 +17,26 @@ def _utcnow():
 
 
 # ============================================================
+# Mixins — 所有模型共享的审计 & 软删除列
+# ============================================================
+
+class TimestampMixin:
+    """提供 created_at / updated_at 审计列。"""
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
+
+
+class SoftDeleteMixin:
+    """提供逻辑删除标记。"""
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime(timezone=True))
+
+
+# ============================================================
 # app schema tables
 # ============================================================
 
-class User(Base):
+class User(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "users"
     __table_args__ = {"schema": "app"}
 
@@ -30,15 +47,11 @@ class User(Base):
     role = Column(String(20), nullable=False, default="user")
     status = Column(String(20), nullable=False, default="active")
     profile = Column(JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
     chat_sessions = relationship("ChatSession", back_populates="user")
 
 
-class ChatSession(Base):
+class ChatSession(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "chat_sessions"
     __table_args__ = {"schema": "app"}
 
@@ -49,16 +62,12 @@ class ChatSession(Base):
     summary = Column(Text)
     status = Column(String(20), nullable=False, default="active")
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
 
     user = relationship("User", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 
-class ChatMessage(Base):
+class ChatMessage(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "chat_messages"
     __table_args__ = {"schema": "app"}
 
@@ -70,15 +79,11 @@ class ChatMessage(Base):
     token_in = Column(Integer)
     token_out = Column(Integer)
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
     session = relationship("ChatSession", back_populates="messages")
 
 
-class CarPriceSnapshot(Base):
+class CarPriceSnapshot(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "car_price_snapshots"
     __table_args__ = (
         CheckConstraint("price >= 0"),
@@ -96,13 +101,9 @@ class CarPriceSnapshot(Base):
     source_url = Column(Text)
     trend = Column(String(20))
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
-class NewsArticle(Base):
+class NewsArticle(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "news_articles"
     __table_args__ = {"schema": "app"}
 
@@ -115,13 +116,9 @@ class NewsArticle(Base):
     related_brand = Column(String(100))
     published_at = Column(DateTime(timezone=True))
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
-class MCPServerConfig(Base):
+class MCPServerConfig(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "mcp_server_configs"
     __table_args__ = {"schema": "app"}
 
@@ -139,17 +136,13 @@ class MCPServerConfig(Base):
     is_essential = Column(Boolean, nullable=False, default=False)
     timeout_seconds = Column(Integer, nullable=False, default=30)
     max_retries = Column(Integer, nullable=False, default=2)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
 # ============================================================
 # ops schema tables
 # ============================================================
 
-class ToolCallLog(Base):
+class ToolCallLog(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "tool_call_logs"
     __table_args__ = {"schema": "ops"}
 
@@ -162,13 +155,9 @@ class ToolCallLog(Base):
     status = Column(String(20), nullable=False, default="success")
     error_text = Column(Text)
     latency_ms = Column(Integer)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
-class RagIngestionJob(Base):
+class RagIngestionJob(Base, TimestampMixin, SoftDeleteMixin):
     """RAG document ingestion job log (reserved for future use)."""
     __tablename__ = "rag_ingestion_jobs"
     __table_args__ = {"schema": "ops"}
@@ -182,13 +171,9 @@ class RagIngestionJob(Base):
     started_at = Column(DateTime(timezone=True))
     finished_at = Column(DateTime(timezone=True))
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
-class RagRetrievalLog(Base):
+class RagRetrievalLog(Base, TimestampMixin, SoftDeleteMixin):
     """RAG retrieval query log (reserved for future use)."""
     __tablename__ = "rag_retrieval_logs"
     __table_args__ = {"schema": "ops"}
@@ -202,17 +187,13 @@ class RagRetrievalLog(Base):
     results = Column(JSON, nullable=False, default=list)
     latency_ms = Column(Integer)
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
 
 # ============================================================
 # rag schema tables
 # ============================================================
 
-class RagDocument(Base):
+class RagDocument(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "rag_documents"
     __table_args__ = {"schema": "rag"}
 
@@ -223,14 +204,10 @@ class RagDocument(Base):
     owner_user_id = Column(BigInteger, ForeignKey("app.users.id", ondelete="SET NULL"))
     content_hash = Column(String(64))
     doc_status = Column(String(20), nullable=False, default="ready")
-    metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    metadata_ = Column("metadata", JSONB, nullable=False, default=dict)
 
 
-class RagChunk(Base):
+class RagChunk(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "rag_chunks"
     __table_args__ = (
         # GIN index on metadata JSONB for fast brand/model/topic filtering
@@ -246,14 +223,10 @@ class RagChunk(Base):
                         comment="brand | model | feature | comparison")
     content = Column(Text, nullable=False)
     token_count = Column(Integer)
-    metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    metadata_ = Column("metadata", JSONB, nullable=False, default=dict)
 
 
-class RagChunkEmbedding(Base):
+class RagChunkEmbedding(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "rag_chunk_embeddings"
     __table_args__ = {"schema": "rag"}
 
@@ -262,7 +235,3 @@ class RagChunkEmbedding(Base):
     embedding_model = Column(String(100), nullable=False)
     embedding = Column(Vector(1024), nullable=False)
     metadata_ = Column("metadata", JSON, nullable=False, default=dict)
-    is_deleted = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
-    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)

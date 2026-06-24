@@ -10,6 +10,7 @@ import json
 import re
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.multi_agent.base import AgentResult, BaseAgent
 from app.core.logging import logger
@@ -178,9 +179,8 @@ class KnowledgeAgent(BaseAgent):
         """导出知识库为 JSON。"""
         query = db.query(RagDocument).filter(RagDocument.is_deleted == False)
         if brand:
-            from sqlalchemy import func
             query = query.filter(
-                func.lower(func.jsonb_extract_path_text(RagDocument.metadata_, "brand"))
+                func.lower(func.jsonb_extract_path_text(RagDocument.metadata_, 'brand'))
                 == brand.lower()
             )
         docs = query.order_by(RagDocument.created_at.desc()).limit(500).all()

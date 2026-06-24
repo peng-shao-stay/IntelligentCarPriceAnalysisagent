@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Table, Input, Select, Button, Space, Tag, Modal,
   Form, message, Popconfirm, Empty, Spin, Card,
@@ -35,7 +35,8 @@ function DataListPage() {
   const [total, setTotal] = useState(0)
 
   // 筛选状态
-  const [keyword, setKeyword] = useState('')
+  const [keyword, setKeyword] = useState('')              // 输入框即时显示
+  const [searchKeyword, setSearchKeyword] = useState('')  // 实际搜索关键词（防抖后）
   const [brandFilter, setBrandFilter] = useState('')
   const [chunkTypeFilter, setChunkTypeFilter] = useState('')
   const [brands, setBrands] = useState([])
@@ -62,22 +63,15 @@ function DataListPage() {
   const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
   const isAdmin = userInfo.role === 'admin'
 
-  const loadBrands = useCallback(async () => {
-    try {
-      const list = await fetchBrands()
-      setBrands(list)
-    } catch {
-      // 品牌列表加载失败不影响主列表
-    }
-  }, [])
-
-  const loadChunkTypes = useCallback(async () => {
-    try {
-      const list = await fetchChunkTypes()
-      setChunkTypes(list)
-    } catch {
-      // 区块类型列表加载失败不影响主列表
-    }
+  // 并行加载筛选下拉选项（挂载时）
+  useEffect(() => {
+    Promise.all([
+      fetchBrands().catch(() => []),
+      fetchChunkTypes().catch(() => []),
+    ]).then(([brandsList, typesList]) => {
+      setBrands(brandsList)
+      setChunkTypes(typesList)
+    })
   }, [])
 
   const loadData = useCallback(async () => {
@@ -85,7 +79,7 @@ function DataListPage() {
     setError(null)
     try {
       const result = await fetchDataList({
-        page, page_size: pageSize, keyword,
+        page, page_size: pageSize, keyword: searchKeyword,
         brand: brandFilter, chunk_type: chunkTypeFilter,
         sort_field: sortField, sort_order: sortOrder,
       })
@@ -98,23 +92,36 @@ function DataListPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, pageSize, keyword, brandFilter, chunkTypeFilter, sortField, sortOrder])
+  }, [page, pageSize, searchKeyword, brandFilter, chunkTypeFilter, sortField, sortOrder])
+
+  // 关键词输入防抖（300ms 后自动搜索）
+  const debounceRef = useRef(null)
+  const handleKeywordChange = useCallback((value) => {
+    setKeyword(value)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearchKeyword(value)
+      setPage(1)
+    }, 300)
+  }, [])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
+  // 组件卸载时清除防抖定时器
   useEffect(() => {
-    loadBrands()
-    loadChunkTypes()
+    return () => clearTimeout(debounceRef.current)
   }, [])
 
   const handleSearch = () => {
+    setSearchKeyword(keyword)
     setPage(1)
   }
 
   const handleReset = () => {
     setKeyword('')
+    setSearchKeyword('')
     setBrandFilter('')
     setChunkTypeFilter('')
     setPage(1)
@@ -335,7 +342,7 @@ function DataListPage() {
                 placeholder="搜索品牌、车型、版本..."
                 prefix={<SearchOutlined />}
                 value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
+                onChange={(e) => handleKeywordChange(e.target.value)}
                 onPressEnter={handleSearch}
                 allowClear
               />

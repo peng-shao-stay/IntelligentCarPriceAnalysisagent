@@ -378,6 +378,14 @@ BEFORE UPDATE ON rag.rag_documents
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
+-- Migration: ensure metadata columns are JSONB (not plain JSON)
+DO $$ BEGIN
+    ALTER TABLE rag.rag_documents
+        ALTER COLUMN metadata TYPE JSONB USING metadata::jsonb;
+EXCEPTION WHEN others THEN
+    RAISE NOTICE 'rag.rag_documents.metadata migration skipped: %', SQLERRM;
+END $$;
+
 
 -- =========================================================
 -- rag.rag_chunks
@@ -413,6 +421,14 @@ CREATE TRIGGER trg_rag_chunks_set_updated_at
 BEFORE UPDATE ON rag.rag_chunks
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
+
+-- Migration: ensure metadata columns are JSONB (not plain JSON)
+DO $$ BEGIN
+    ALTER TABLE rag.rag_chunks
+        ALTER COLUMN metadata TYPE JSONB USING metadata::jsonb;
+EXCEPTION WHEN others THEN
+    RAISE NOTICE 'rag.rag_chunks.metadata migration skipped: %', SQLERRM;
+END $$;
 
 
 -- =========================================================

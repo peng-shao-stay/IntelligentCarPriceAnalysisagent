@@ -8,6 +8,7 @@ from typing import Optional, List, Literal
 
 from app.db.database import get_db
 from app.db.models import RagDocument, RagChunk, RagChunkEmbedding
+from sqlalchemy import func
 from app.auth.dependencies import admin_required
 from app.services.rag_service import rag_service, validate_car_json
 from app.schemas.chunk import ChunkType, SearchFilters
@@ -96,10 +97,8 @@ def list_documents(
     query = db.query(RagDocument).filter(RagDocument.is_deleted == False)
 
     if brand:
-        from sqlalchemy import func
         query = query.filter(
-            func.lower(func.jsonb_extract_path_text(RagDocument.metadata_, "brand"))
-            == brand.lower()
+            func.lower(RagDocument.metadata_['brand'].astext)== brand.lower()
         )
 
     total = query.count()

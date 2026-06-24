@@ -439,14 +439,14 @@ class RAGService:
         # Brand filter (on chunk metadata JSONB)
         if filters.get("brand"):
             query = query.filter(
-                func.lower(func.jsonb_extract_path_text(RagChunk.metadata_, "brand"))
+                func.lower(func.jsonb_extract_path_text(RagChunk.metadata_, 'brand'))
                 == filters["brand"].lower()
             )
 
         # Model filter
         if filters.get("model"):
             query = query.filter(
-                func.lower(func.jsonb_extract_path_text(RagChunk.metadata_, "model"))
+                func.lower(func.jsonb_extract_path_text(RagChunk.metadata_, 'model'))
                 == filters["model"].lower()
             )
 
@@ -457,35 +457,35 @@ class RAGService:
         # Vehicle type filter
         if filters.get("vehicle_type"):
             query = query.filter(
-                func.jsonb_extract_path_text(RagChunk.metadata_, "vehicle_type")
+                func.jsonb_extract_path_text(RagChunk.metadata_, 'vehicle_type')
                 == filters["vehicle_type"]
             )
 
         # Smart drive filter
         if filters.get("smart_drive"):
             query = query.filter(
-                func.jsonb_extract_path_text(RagChunk.metadata_, "smart_drive")
+                func.jsonb_extract_path_text(RagChunk.metadata_, 'smart_drive')
                 == filters["smart_drive"]
             )
 
         # Price range filter
         if filters.get("price_range"):
             query = query.filter(
-                func.jsonb_extract_path_text(RagChunk.metadata_, "price_range")
+                func.jsonb_extract_path_text(RagChunk.metadata_, 'price_range')
                 == filters["price_range"]
             )
 
         # Year filter
         if filters.get("year"):
             query = query.filter(
-                func.jsonb_extract_path_text(RagChunk.metadata_, "year")
+                func.jsonb_extract_path_text(RagChunk.metadata_, 'year')
                 == filters["year"]
             )
 
         # Topic filter (for feature chunks)
         if filters.get("topic"):
             query = query.filter(
-                func.jsonb_extract_path_text(RagChunk.metadata_, "topic")
+                func.jsonb_extract_path_text(RagChunk.metadata_, 'topic')
                 == filters["topic"]
             )
 
@@ -777,7 +777,8 @@ class RAGService:
         chunk_types = {t: c for t, c in type_counts}
 
         brands = (
-            db.query(sa_func.jsonb_extract_path_text(RagDocument.metadata_, "brand"))
+            db.query(func.jsonb_extract_path_text(RagDocument.metadata_, 'brand'))
+            .select_from(RagDocument)
             .filter(RagDocument.is_deleted == False)
             .distinct()
             .all()

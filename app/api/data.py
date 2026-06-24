@@ -2,9 +2,12 @@
 数据管理 API — 基于 RAG 知识库的区块（chunks）管理
 """
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy.orm import Session
 from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from pydantic import BaseModel, Field
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import RagDocument, RagChunk
@@ -12,6 +15,50 @@ from app.api.auth import get_current_admin_user, get_current_user
 from app.core.logging import logger
 
 router = APIRouter(prefix="/data", tags=["数据管理"])
+
+# --- 序列化 & 字段映射 ---
+
+# API 字段名 → metadata JSON 字段名
+_FIELD_KEY_MAP: dict[str, str] = {"brand_name": "brand", "model_name": "model"}
+
+
+class UpdateChunkRequest(BaseModel):
+    """RagChunk 可编辑字段。"""
+    chunk_type: str | None = None
+    brand_name: str | None = Field(None, description="品牌名 → metadata.brand")
+    model_name: str | None = Field(None, description="车型名 → metadata.model")
+    price_range: str | None = None
+    year: str | None = None
+    vehicle_type: str | None = None
+    power_type: list[str] | None = Field(None, description="动力类型列表 → metadata.power_type")
+    smart_drive: str | None = Field(None, description="智驾等级 → metadata.smart_drive")
+    source: str | None = None
+
+
+def _chunk_to_item(chunk: RagChunk, *, include_full_content: bool = False) -> dict:
+    """将 RagChunk ORM 对象序列化为 API 响应 dict。"""
+    meta = chunk.metadata_ or {}
+    return {
+        "id": chunk.id,
+        "document_id": chunk.document_id,
+        "chunk_id": chunk.chunk_id,
+        "chunk_type": chunk.chunk_type,
+        "chunk_index": chunk.chunk_index,
+        "brand_name": meta.get("brand", ""),
+        "model_name": meta.get("model", ""),
+        "price_range": meta.get("price_range", ""),
+        "year": meta.get("year", ""),
+        "vehicle_type": meta.get("vehicle_type", ""),
+        "power_type": meta.get("power_type", []),
+        "smart_drive": meta.get("smart_drive", ""),
+        "source": meta.get("source", ""),
+        "content": chunk.content
+        if include_full_content
+        else (chunk.content[:300] if chunk.content else ""),
+        "token_count": chunk.token_count,
+        "created_at": chunk.created_at.isoformat() if chunk.created_at else "",
+        "updated_at": chunk.updated_at.isoformat() if chunk.updated_at else "",
+    }
 
 
 @router.get("/list")
@@ -34,13 +81,12 @@ def list_chunks(
         query = query.filter(
             (RagChunk.content.ilike(like))
             | (RagChunk.chunk_id.ilike(like))
-            | (RagChunk.metadata_['brand'].astext.ilike(like))
-            | (RagChunk.metadata_['model'].astext.ilike(like))
+            | (func.jsonb_extract_path_text(RagChunk.metadata_, 'brand').ilike(like))
+            | (func.jsonb_extract_path_text(RagChunk.metadata_, 'model').ilike(like))
         )
     if brand:
-        from sqlalchemy import func
         query = query.filter(
-            func.lower(RagChunk.metadata_['brand'].astext) == brand.lower()
+            func.lower(func.jsonb_extract_path_text(RagChunk.metadata_, 'brand')) == brand.lower()
         )
     if chunk_type:
         query = query.filter(RagChunk.chunk_type == chunk_type)
@@ -57,30 +103,12 @@ def list_chunks(
     total = query.count()
     chunks = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    items = []
-    for c in chunks:
-        meta = c.metadata_ or {}
-        items.append({
-            "id": c.id,
-            "document_id": c.document_id,
-            "chunk_id": c.chunk_id,
-            "chunk_type": c.chunk_type,
-            "chunk_index": c.chunk_index,
-            "brand_name": meta.get("brand", ""),
-            "model_name": meta.get("model", ""),
-            "price_range": meta.get("price_range", ""),
-            "year": meta.get("year", ""),
-            "vehicle_type": meta.get("vehicle_type", ""),
-            "power_type": meta.get("power_type", []),
-            "smart_drive": meta.get("smart_drive", ""),
-            "source": meta.get("source", ""),
-            "content": c.content[:300] if c.content else "",
-            "token_count": c.token_count,
-            "created_at": c.created_at.isoformat() if c.created_at else "",
-            "updated_at": c.updated_at.isoformat() if c.updated_at else "",
-        })
-
-    return {"total": total, "page": page, "page_size": page_size, "items": items}
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [_chunk_to_item(c) for c in chunks],
+    }
 
 
 @router.get("/chunk-types")
@@ -101,9 +129,9 @@ def list_brands(
     _current_user=Depends(get_current_user),
 ):
     """返回所有不重复的品牌列表（从 RagChunk 元数据提取）。"""
-    brands = db.query(RagChunk.metadata_['brand'].astext).filter(
+    brands = db.query(func.jsonb_extract_path_text(RagChunk.metadata_, 'brand')).filter(
         RagChunk.is_deleted == False,
-        RagChunk.metadata_['brand'].astext != ""
+        func.jsonb_extract_path_text(RagChunk.metadata_, 'brand') != ""
     ).distinct().all()
     return sorted([b[0] for b in brands if b[0]])
 
@@ -214,32 +242,13 @@ def get_chunk(
     ).first()
     if not chunk:
         raise HTTPException(status_code=404, detail="区块不存在")
-    meta = chunk.metadata_ or {}
-    return {
-        "id": chunk.id,
-        "document_id": chunk.document_id,
-        "chunk_id": chunk.chunk_id,
-        "chunk_type": chunk.chunk_type,
-        "chunk_index": chunk.chunk_index,
-        "brand_name": meta.get("brand", ""),
-        "model_name": meta.get("model", ""),
-        "price_range": meta.get("price_range", ""),
-        "year": meta.get("year", ""),
-        "vehicle_type": meta.get("vehicle_type", ""),
-        "power_type": meta.get("power_type", []),
-        "smart_drive": meta.get("smart_drive", ""),
-        "source": meta.get("source", ""),
-        "content": chunk.content,
-        "token_count": chunk.token_count,
-        "created_at": chunk.created_at.isoformat() if chunk.created_at else "",
-        "updated_at": chunk.updated_at.isoformat() if chunk.updated_at else "",
-    }
+    return _chunk_to_item(chunk, include_full_content=True)
 
 
 @router.put("/{chunk_id}")
 def update_chunk(
     chunk_id: int,
-    body: dict,
+    body: UpdateChunkRequest,
     db: Session = Depends(get_db),
     _current_user=Depends(get_current_admin_user),
 ):
@@ -250,16 +259,22 @@ def update_chunk(
     if not chunk:
         raise HTTPException(status_code=404, detail="区块不存在")
 
-    # 更新 chunk 自身的字段
-    if "chunk_type" in body:
-        chunk.chunk_type = body["chunk_type"]
+    body_dict = body.model_dump(exclude_unset=True)
 
-    # 更新 metadata 中的字段
+    # 更新 chunk 自身的字段
+    if "chunk_type" in body_dict:
+        chunk.chunk_type = body_dict.pop("chunk_type")
+
+    # 更新 metadata JSON 字段 — 先做 API→DB 名称映射
     meta = dict(chunk.metadata_ or {})
-    for field in ("brand", "model", "price_range", "year", "vehicle_type", "source"):
-        key = "brand_name" if field == "brand" else ("model_name" if field == "model" else field)
-        if key in body:
-            meta[field] = body[key]
+    for api_field, meta_field in _FIELD_KEY_MAP.items():
+        if api_field in body_dict:
+            meta[meta_field] = body_dict.pop(api_field)
+    # 剩余同名字段直接写入 metadata
+    for field in ("price_range", "year", "vehicle_type", "power_type", "smart_drive", "source"):
+        if field in body_dict:
+            meta[field] = body_dict.pop(field)
+
     chunk.metadata_ = meta
     chunk.updated_at = datetime.now(timezone.utc)
 

@@ -37,6 +37,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
+        fonts-dejavu-core \
         && rm -rf /var/lib/apt/lists/*
 
 # 从构建阶段复制已安装的 Python 包
@@ -46,7 +47,6 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # 复制应用代码
 COPY main.py .
 COPY app/ ./app/
-COPY requirements.txt .
 COPY schema.sql .
 
 # 复制启动脚本

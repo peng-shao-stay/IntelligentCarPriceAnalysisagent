@@ -81,7 +81,22 @@ async def lifespan(app: FastAPI):
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS rag"))
         conn.commit()
     Base.metadata.create_all(bind=engine)
-    # 补齐旧表缺少的列
+    # 补齐旧表缺少的列 / 列类型修正
+    with engine.connect() as conn:
+        # 将 metadata 列从 json 迁移到 jsonb（兼容 jsonb_extract_path_text）
+        conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE rag.rag_documents
+                    ALTER COLUMN metadata TYPE JSONB USING metadata::jsonb;
+            EXCEPTION WHEN others THEN NULL;
+            END $$;
+            DO $$ BEGIN
+                ALTER TABLE rag.rag_chunks
+                    ALTER COLUMN metadata TYPE JSONB USING metadata::jsonb;
+            EXCEPTION WHEN others THEN NULL;
+            END $$;
+        """))
+        conn.commit()
     with engine.connect() as conn:
         cols = [row[0] for row in conn.execute(
             text("SELECT column_name FROM information_schema.columns WHERE table_schema='app' AND table_name='users'")

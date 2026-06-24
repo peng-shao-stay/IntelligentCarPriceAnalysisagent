@@ -1,6 +1,7 @@
 """
 聊天 API 路由 — 用户级会话隔离
 """
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -236,6 +237,7 @@ def delete_session(
             raise HTTPException(status_code=403, detail="无权删除此会话")
 
         session.is_deleted = True
+        session.deleted_at = datetime.now(timezone.utc)
         db.commit()
 
         # Clear Redis cache

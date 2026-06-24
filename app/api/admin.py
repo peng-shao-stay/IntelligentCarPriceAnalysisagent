@@ -1,6 +1,8 @@
 """
 后台管理 API - 用户管理 + 仪表盘统计 + LLM配置
 """
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -177,6 +179,7 @@ def delete_user(
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="不能删除管理员账户")
     user.is_deleted = True
+    user.deleted_at = datetime.now(timezone.utc)
     db.commit()
     logger.info(f"User {user.username} soft-deleted")
     return {"message": "用户已删除"}

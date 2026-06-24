@@ -11,6 +11,7 @@ Endpoints:
   POST   /admin/mcp/servers/{id}/discover — force tool rediscovery
 """
 
+from datetime import datetime, timezone
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -176,6 +177,7 @@ def delete_server(
         raise HTTPException(status_code=403, detail="Cannot delete an essential MCP server")
 
     server.is_deleted = True
+    server.deleted_at = datetime.now(timezone.utc)
     db.commit()
 
     mcp_config_service.invalidate(server.name)
