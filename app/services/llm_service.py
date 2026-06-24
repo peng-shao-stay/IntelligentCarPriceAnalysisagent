@@ -202,6 +202,15 @@ class LLMService:
             return self.assistant_llm
         return self.primary_llm or self.assistant_llm
 
+    def _get_fallback_backend(self, model_type: Optional[str] = None):
+        """Return the other backend for fallback on failure."""
+        name = model_type or self.default_model or "primary"
+        if name == "primary" and self.assistant_llm is not None:
+            return self.assistant_llm
+        if name == "assistant" and self.primary_llm is not None:
+            return self.primary_llm
+        return None
+
     def chat(
         self,
         messages: List[dict],
@@ -223,9 +232,18 @@ class LLMService:
             elif role == "assistant":
                 langchain_msgs.append(AIMessage(content=content))
 
-        response = backend.invoke(langchain_msgs)
-        logger.info("LLM response generated")
-        return response.content
+        try:
+            response = backend.invoke(langchain_msgs)
+            logger.info("LLM response generated")
+            return response.content
+        except Exception as exc:
+            fallback = self._get_fallback_backend(model_type)
+            if fallback is not None:
+                logger.warning(f"LLM backend failed ({exc}), trying fallback...")
+                response = fallback.invoke(langchain_msgs)
+                logger.info("LLM fallback response generated")
+                return response.content
+            raise
 
     def generate_with_tools(
         self,

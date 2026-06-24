@@ -86,7 +86,7 @@ class WriterAgent(BaseAgent):
             })
         except Exception as exc:
             logger.warning(f"Writer LLM failed: {exc}")
-            return AgentResult.fail("报告生成失败")
+            return AgentResult.fail(f"报告生成失败: {exc}")
 
     def generate_general_chat(
         self, message: str, history: List[Dict] = None,
@@ -119,7 +119,7 @@ class WriterAgent(BaseAgent):
             return AgentResult.ok({"report": response})
         except Exception as exc:
             logger.warning(f"Writer general chat failed: {exc}")
-            return AgentResult.fail("对话生成失败")
+            return AgentResult.fail(f"对话生成失败: {exc}")
 
     # ── 内部方法 ──────────────────────────────────────────────
 

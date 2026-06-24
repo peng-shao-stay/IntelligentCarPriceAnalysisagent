@@ -107,13 +107,15 @@ class OrchestratorAgent(BaseAgent):
             search_data=clean_results, knowledge_data=[],
             history=history,
         )
-        if writer_result:
+        if writer_result is not None and writer_result.success:
             return writer_result.data.get("report", "")
 
-        # Fallback
+        # Fallback — 区分"LLM 调用失败"和"无数据"
+        writer_error = writer_result.error if writer_result is not None else "Writer 返回空"
+        logger.warning(f"Orchestrator: Writer failed for intent={intent.value}, error={writer_error}")
         if clean_results:
             return self._fallback_text(intent, clean_results, car_info)
-        return "抱歉，暂时没有查到相关信息。"
+        return f"抱歉，AI 模型暂时不可用。（原因：{writer_error}）"
 
     def _detect_intent(self, message: str):
         from app.agent.agent import Intent
@@ -171,7 +173,11 @@ class OrchestratorAgent(BaseAgent):
                     for i, it in enumerate(items[:3], 1)
                 )
         r = self.writer.generate_general_chat(message, history, search_text)
-        return r.data.get("report", "") if r else "抱歉，暂时无法回复。"
+        if r is not None and r.success:
+            return r.data.get("report", "")
+        err = r.error if r is not None else "Writer 返回空"
+        logger.warning(f"Orchestrator: General chat Writer failed, error={err}")
+        return f"抱歉，AI 模型暂时不可用。（原因：{err}）"
 
     def _fallback_text(self, intent, results: list, car_info: dict) -> str:
         from app.agent.agent import Intent
