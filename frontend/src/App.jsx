@@ -27,6 +27,7 @@ function App() {
   return (
     <ThemeContext.Provider value={{ dark, toggleTheme }}>
       <ConfigProvider theme={{ algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm }}>
+        <div data-theme={dark ? 'dark' : 'light'}>
         <ErrorBoundary>
           <BrowserRouter>
             <Routes>
@@ -43,6 +44,7 @@ function App() {
             </Routes>
           </BrowserRouter>
         </ErrorBoundary>
+        </div>
       </ConfigProvider>
     </ThemeContext.Provider>
   )

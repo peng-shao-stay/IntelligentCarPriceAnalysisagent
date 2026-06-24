@@ -78,7 +78,7 @@ services:
 
       # --- 应用设置 ---
       APP_NAME: ${APP_NAME:-AutoMind AI}
-      APP_VERSION: ${APP_VERSION:-0.1.0}
+      APP_VERSION: ${APP_VERSION:-0.1.3}
       DEBUG: ${DEBUG:-false}
       SECRET_KEY: ${SECRET_KEY:-automind-secret-key-change-in-production}
       JWT_ALGORITHM: HS256

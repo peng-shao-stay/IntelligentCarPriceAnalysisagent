@@ -64,6 +64,33 @@
   color: #333;
   border-bottom-left-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  /* ---- 设计令牌（亮色默认） ---- */
+  --md-border: #e0e0e0;
+  --md-th-bg: #f5f5f5;
+  --md-code-bg: #f0f0f0;
+  --md-pre-bg: #f6f8fa;
+  --md-text-secondary: #666;
+  --md-accent: #1890ff;
+  --md-code-color: #d4380d;
+  --md-radius-sm: 3px;
+  --md-radius-md: 6px;
+  --md-margin-y: 8px;
+}
+
+/* ---- 暗色模式覆盖 ---- */
+[data-theme="dark"] .assistant-message .message-text {
+  background: #1f1f1f;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  --md-border: #424242;
+  --md-th-bg: #2d2d2d;
+  --md-code-bg: #2d2d2d;
+  --md-pre-bg: #1e1e1e;
+  --md-text-secondary: #999;
+  --md-accent: #69b1ff;
+  --md-code-color: #ff9c6e;
 }
 
 .message-time {
@@ -88,4 +115,94 @@
 .sending-indicator {
   font-size: 12px;
   color: #999;
+}
+
+/* ============================================================
+   Markdown 渲染样式（仅 assistant 消息，CSS 嵌套 + 令牌）
+   ============================================================ */
+
+.assistant-message .message-text {
+  /* ---- 表格 ---- */
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--md-margin-y) 0;
+    font-size: 13px;
+  }
+  & th, & td {
+    border: 1px solid var(--md-border);
+    padding: 6px 10px;
+    text-align: left;
+  }
+  & th {
+    background: var(--md-th-bg);
+    font-weight: 600;
+  }
+
+  /* ---- 标题 ---- */
+  & h1, & h2, & h3, & h4, & h5, & h6 {
+    margin: 12px 0 6px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  & h1 { font-size: 1.4em; }
+  & h2 { font-size: 1.25em; }
+  & h3 { font-size: 1.1em; }
+  & h4 { font-size: 1em; }
+
+  /* ---- 列表 ---- */
+  & ul, & ol {
+    padding-left: 20px;
+    margin: 6px 0;
+  }
+  & li { margin: 2px 0; }
+
+  /* ---- 段落 & 内联 ---- */
+  & p  { margin: 4px 0; }
+  & strong { font-weight: 600; }
+  & a {
+    color: var(--md-accent);
+    text-decoration: underline;
+  }
+
+  /* ---- 代码 ---- */
+  & code {
+    background: var(--md-code-bg);
+    padding: 2px 6px;
+    border-radius: var(--md-radius-sm);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    color: var(--md-code-color);
+  }
+  & pre {
+    background: var(--md-pre-bg);
+    border: 1px solid var(--md-border);
+    border-radius: var(--md-radius-md);
+    padding: 12px;
+    overflow-x: auto;
+    margin: var(--md-margin-y) 0;
+
+    & code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+  }
+
+  /* ---- 引用 & 分割线 & 图片 ---- */
+  & blockquote {
+    border-left: 3px solid var(--md-accent);
+    padding-left: 12px;
+    margin: var(--md-margin-y) 0;
+    color: var(--md-text-secondary);
+  }
+  & hr {
+    border: none;
+    border-top: 1px solid var(--md-border);
+    margin: 12px 0;
+  }
+  & img {
+    max-width: 100%;
+    border-radius: var(--md-radius-md);
+  }
 }
