@@ -115,7 +115,13 @@ class OrchestratorAgent(BaseAgent):
         logger.warning(f"Orchestrator: Writer failed for intent={intent.value}, error={writer_error}")
         if clean_results:
             return self._fallback_text(intent, clean_results, car_info)
-        return f"抱歉，AI 模型暂时不可用。（原因：{writer_error}）"
+
+        # 搜索无数据 → 回退到 LLM 通用对话（模型可用训练知识回答）
+        logger.info(
+            f"Orchestrator: no search data for intent={intent.value}, "
+            f"falling back to general chat"
+        )
+        return self._handle_general(message, history, web_search)
 
     def _detect_intent(self, message: str):
         from app.agent.agent import Intent
