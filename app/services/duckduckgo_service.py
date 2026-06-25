@@ -1,5 +1,5 @@
 """
-DuckDuckGo search service — primary free search engine with Tavily fallback.
+DuckDuckGo search service — primary free search engine.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ except ImportError:
 
 
 class DuckDuckGoSearchService:
-    """Free web search via DuckDuckGo, with Tavily as fallback when needed."""
+    """Free web search via DuckDuckGo."""
 
     def __init__(self):
         self._ddgs: Optional[DDGS] = None
@@ -34,25 +34,25 @@ class DuckDuckGoSearchService:
     def search_car_price(
         self, brand: str, model: str, version: str = None
     ) -> List[Dict]:
-        """Search car prices, try DuckDuckGo first, fall back to Tavily."""
+        """Search car prices via DuckDuckGo."""
         results = self._search_web(f"{brand} {model} {version or ''} 价格 报价 官网")
         if results:
             return self._parse_price_results(results, brand, model)
-        return self._tavily_fallback("search_car_price", brand, model, version)
+        return []
 
     def search_news(self, keyword: str, limit: int = 5) -> List[Dict]:
         """Search car news."""
         results = self._search_web(f"{keyword} 汽车 最新新闻", max_results=limit)
         if results:
             return self._parse_news_results(results, limit)
-        return self._tavily_fallback("search_car_news", keyword, limit=limit)
+        return []
 
     def search_general(self, query: str, max_results: int = 5) -> List[Dict]:
         """General purpose web search."""
         results = self._search_web(query, max_results=max_results)
         if results:
             return self._parse_general_results(results)
-        return self._tavily_fallback("search_general", query, max_results=max_results)
+        return []
 
     def search_comparison(self, car1: str, car2: str) -> Dict:
         """Search car comparison."""
@@ -60,8 +60,7 @@ class DuckDuckGoSearchService:
         results = self._search_web(query)
         if results:
             return {"query": query, "results": self._parse_general_results(results), "summary": ""}
-        tavily_result = self._tavily_fallback("search_car_comparison", car1, car2)
-        return tavily_result if isinstance(tavily_result, dict) else {"query": query, "results": [], "summary": ""}
+        return {"query": query, "results": [], "summary": ""}
 
     # ── Internal: DuckDuckGo core ──────────────────────────────
 
@@ -75,7 +74,7 @@ class DuckDuckGoSearchService:
             logger.info(f"DuckDuckGo search: '{query[:60]}' → {len(raw)} results")
             return raw
         except Exception:
-            logger.debug(f"DuckDuckGo search failed, falling back to Tavily")
+            logger.debug(f"DuckDuckGo search failed for '{query[:60]}'")
             return []
 
     # ── Result parsers ─────────────────────────────────────────
@@ -129,7 +128,7 @@ class DuckDuckGoSearchService:
             for item in raw
         ]
 
-    # ── Price extraction helpers (same logic as tavily_service) ─
+    # ── Price extraction helpers ────────────────────────────────
 
     def _extract_price(self, text: str) -> Optional[float]:
         patterns = [
@@ -172,19 +171,5 @@ class DuckDuckGoSearchService:
             if domain in url:
                 return score
         return 50
-
-    # ── Tavily fallback ────────────────────────────────────────
-
-    def _tavily_fallback(self, method: str, *args, **kwargs):
-        try:
-            from app.services.tavily_service import tavily_search
-            fn = getattr(tavily_search, method, None)
-            if fn:
-                logger.info(f"Tavily fallback for {method}")
-                return fn(*args, **kwargs)
-        except Exception as exc:
-            logger.warning(f"Tavily fallback failed: {exc}")
-        return [] if not kwargs.get("returns_dict") else {}
-
 
 duckduckgo_search = DuckDuckGoSearchService()

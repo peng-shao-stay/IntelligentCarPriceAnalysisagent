@@ -65,7 +65,7 @@ def query_car_price(
         brand: 汽车品牌
         model: 车型
         version: 可选版本号
-        provider: 可选 SearchProvider，不传则使用默认 TavilySearchProvider
+        provider: 可选 SearchProvider，不传则使用默认 DuckDuckGoSearchProvider
 
     返回按可信度排序的结果，包含从内容中提取的价格字段。
     """

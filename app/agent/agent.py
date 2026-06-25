@@ -14,7 +14,7 @@ Dependencies:
   - SearchProvider  – web search (prices, news, comparisons)
   - VectorProvider  – semantic / RAG search
   - DatabaseProvider – session management
-  All injected via ProviderRegistry; no direct Tavily / RAG imports.
+  All injected via ProviderRegistry; no direct search / RAG imports.
 """
 
 from __future__ import annotations

@@ -30,7 +30,7 @@ def search_news(
     Args:
         keyword: 搜索关键词
         limit: 返回数量上限
-        provider: 可选 SearchProvider，不传则使用默认 TavilySearchProvider
+        provider: 可选 SearchProvider，不传则使用默认 DuckDuckGoSearchProvider
 
     返回按可信度排序的结果列表。
     """

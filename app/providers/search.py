@@ -1,9 +1,9 @@
 """
-Tavily-based SearchProvider implementation.
+DuckDuckGo-based SearchProvider implementation.
 
-Wraps the web_search_service pipeline (Tavily → multi-dimension search →
+Wraps the web_search_service pipeline (DuckDuckGo → multi-dimension search →
 credibility scoring → dedup → quality filter) behind the SearchProvider interface.
-The Agent never imports Tavily or web_search_service directly.
+The Agent never imports search services directly.
 """
 
 from __future__ import annotations
@@ -54,8 +54,8 @@ def _extract_version(title: str) -> str:
 #  Concrete Provider
 # ═══════════════════════════════════════════════════════════════
 
-class TavilySearchProvider(SearchProvider):
-    """Search provider backed by Tavily via the multi-dimensional web search pipeline."""
+class DuckDuckGoSearchProvider(SearchProvider):
+    """Search provider backed by DuckDuckGo via the multi-dimensional web search pipeline."""
 
     def __init__(self, web_search_svc=None):
         self._web = web_search_svc or _web_search_svc
@@ -72,7 +72,7 @@ class TavilySearchProvider(SearchProvider):
         model: str,
         version: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        logger.info(f"[TavilySearchProvider] search_car_price: {brand} {model} {version or ''}")
+        logger.info(f"[DDGSearchProvider] search_car_price: {brand} {model} {version or ''}")
 
         results = self._web.search_car(brand=brand, model=model, version=version, top_k=10)
         results = self._web.filter_quality(results)
@@ -102,7 +102,7 @@ class TavilySearchProvider(SearchProvider):
 
         with_price = sum(1 for o in output if o["price"])
         logger.info(
-            f"[TavilySearchProvider] '{brand} {model}': {len(output)} results, "
+            f"[DDGSearchProvider] '{brand} {model}': {len(output)} results, "
             f"{with_price} with price"
         )
         return output
@@ -112,7 +112,7 @@ class TavilySearchProvider(SearchProvider):
         keyword: str,
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
-        logger.info(f"[TavilySearchProvider] search_news: {keyword}")
+        logger.info(f"[DDGSearchProvider] search_news: {keyword}")
 
         results = self._web.search_news(keyword=keyword, top_k=limit)
         results = self._web.filter_quality(results)
@@ -130,7 +130,7 @@ class TavilySearchProvider(SearchProvider):
                 "published_date": r.published_date,
             })
 
-        logger.info(f"[TavilySearchProvider] news '{keyword}': {len(news_list)} results")
+        logger.info(f"[DDGSearchProvider] news '{keyword}': {len(news_list)} results")
         return news_list
 
     def search_general(
@@ -138,10 +138,10 @@ class TavilySearchProvider(SearchProvider):
         query: str,
         max_results: int = 5,
     ) -> List[Dict[str, Any]]:
-        logger.info(f"[TavilySearchProvider] search_general: {query[:60]}")
+        logger.info(f"[DDGSearchProvider] search_general: {query[:60]}")
 
-        from app.services.tavily_service import tavily_search
-        return tavily_search.search_general(query, max_results=max_results)
+        from app.services.duckduckgo_service import duckduckgo_search
+        return duckduckgo_search.search_general(query, max_results=max_results)
 
     def search_comparison(
         self,
@@ -152,5 +152,5 @@ class TavilySearchProvider(SearchProvider):
     ) -> Dict[str, Any]:
         car1 = f"{car1_brand} {car1_model}"
         car2 = f"{car2_brand} {car2_model}"
-        logger.info(f"[TavilySearchProvider] search_comparison: {car1} vs {car2}")
+        logger.info(f"[DDGSearchProvider] search_comparison: {car1} vs {car2}")
         return self._web.search_comparison(car1, car2)

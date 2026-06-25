@@ -7,7 +7,7 @@ Provider interfaces that the Agent already depends on.
 Flow:
   DB (mcp_server_configs) → MCPServerConfig → MCPClient → Provider interface
 
-Essential servers (like Tavily) remain direct Provider implementations.
+Essential servers (like DuckDuckGo) remain direct Provider implementations.
 Non-essential servers can be managed via MCP from the frontend.
 """
 
@@ -117,15 +117,15 @@ class MCPConfigService:
 # ═══════════════════════════════════════════════════════════════
 
 class MCPEnabledSearchProvider(SearchProvider):
-    """SearchProvider that routes through MCP when available, falls back to Tavily.
+    """SearchProvider that routes through MCP when available, falls back to primary.
 
-    This preserves Tavily as the essential search backend while allowing
+    This preserves DuckDuckGo as the essential search backend while allowing
     additional MCP-based search servers to contribute results.
     """
 
     def __init__(
         self,
-        primary: SearchProvider,  # essential — Tavily
+        primary: SearchProvider,  # essential — DuckDuckGo
         config_service: MCPConfigService,
     ):
         self._primary = primary
@@ -158,7 +158,7 @@ class MCPEnabledSearchProvider(SearchProvider):
         model: str,
         version: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        # Primary: Tavily
+        # Primary: DuckDuckGo
         results = self._primary.search_car_price(brand=brand, model=model, version=version)
 
         # Augment: try MCP car-data server for structured specs

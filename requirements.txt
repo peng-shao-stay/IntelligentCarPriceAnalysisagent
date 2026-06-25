@@ -16,8 +16,6 @@ langchain>=0.1.0
 langchain-core>=0.1.0  # 核心消息类型
 langchain-openai>=0.0.5
 langchain-community>=0.0.10  # 包含 Ollama 和 Tavily 支持
-langchain-tavily>=0.1.0
-
 # HTTP 请求
 requests>=2.31.0
 httpx>=0.26.0

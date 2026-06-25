@@ -1,5 +1,5 @@
 """
-Search MCP Server — wraps Tavily web search as an MCP-compatible tool server.
+Search MCP Server — wraps DuckDuckGo web search as an MCP-compatible tool server.
 
 Exposes tools:
   - search_car_price  —  multi-dimension car price search
@@ -187,8 +187,8 @@ class SearchMCPServer:
         query = params["query"]
         max_results = params.get("max_results", 5)
 
-        from app.services.tavily_service import tavily_search
-        results = tavily_search.search_general(query, max_results=max_results)
+        from app.services.duckduckgo_service import duckduckgo_search
+        results = duckduckgo_search.search_general(query, max_results=max_results)
 
         self.server.log.info(f"search_general done | query={query[:60]} | results={len(results)}")
         return results

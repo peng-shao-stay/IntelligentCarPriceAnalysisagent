@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.services.tavily_service import tavily_search
+from app.services.duckduckgo_service import duckduckgo_search
 
 # ── Source credibility tiers ──────────────────────────────────
 
@@ -159,7 +159,7 @@ class WebSearchService:
 
     @property
     def is_available(self) -> bool:
-        return tavily_search.is_available
+        return duckduckgo_search.is_available
 
     # ── Public API ─────────────────────────────────────────
 
@@ -184,7 +184,7 @@ class WebSearchService:
             Ranked search results with credibility scores
         """
         if not self.is_available:
-            logger.warning("Web search unavailable. Check TAVILY_API_KEY.")
+            logger.warning("Web search unavailable. DuckDuckGo may not be installed.")
             return []
 
         car_key = f"{brand} {model}" + (f" {version}" if version else "")
@@ -283,47 +283,57 @@ class WebSearchService:
         return all_results[:top_k]
 
     def search_comparison(self, car1: str, car2: str) -> Dict:
-        """Search for car comparison information."""
-        base = tavily_search.search_car_comparison(car1, car2)
-        if not base or not base.get("results"):
+        """Search for car comparison information via DuckDuckGo."""
+        import re as _re
+        query = f"{car1} vs {car2} 对比 价格 配置"
+        raw = self._search_raw(query, max_results=10)
+        if not raw:
             return {"car1": car1, "car2": car2, "results": [], "summary": "未找到对比信息"}
 
-        results = base["results"]
         scored = []
-        for r in results:
+        for r in raw:
             if not isinstance(r, dict):
                 continue
-            url = r.get("url", "")
-            source = r.get("source", "")
+            url = r.get("link", r.get("url", ""))
+            source = r.get("source", "DuckDuckGo")
+            title = r.get("title", "")
+            content = r.get("body", "") or r.get("snippet", "") or ""
             score, tier = self._score_source(url, source)
             scored.append({
-                "title": r.get("title", ""),
+                "title": title,
                 "url": url,
-                "content": r.get("content", "")[:300],
+                "content": content[:300],
                 "source": source,
                 "credibility_score": score,
                 "credibility_tier": tier,
             })
 
         scored.sort(key=lambda r: r["credibility_score"], reverse=True)
+        # Build a simple summary from top results
+        summary_parts = [r["content"][:200] for r in scored[:3] if r["content"]]
         return {
             "car1": car1,
             "car2": car2,
             "results": scored[:5],
-            "summary": base.get("summary", ""),
+            "summary": "\n\n".join(summary_parts) if summary_parts else "未找到对比信息",
         }
 
     def extract_content(self, urls: List[str]) -> List[Dict]:
-        """Extract full page content from URLs."""
-        return tavily_search.extract_page_content(urls)
+        """Extract full page content from URLs.
+
+        DuckDuckGo doesn't support page extraction, returns empty list.
+        For page extraction, consider using BeautifulSoup directly.
+        """
+        logger.debug(f"Page extraction not supported with DuckDuckGo ({len(urls)} URLs)")
+        return []
 
     # ── Internal helpers ───────────────────────────────────
 
     def _search_single_dimension(
         self, query: str, dimension: str, weight: float
     ) -> List[SearchResult]:
-        """Execute a single Tavily search and wrap results."""
-        raw_results = self._tavily_search_raw(query)
+        """Execute a single DDG search and wrap results."""
+        raw_results = self._search_raw(query)
         return [
             SearchResult(
                 title=r.get("title", ""),
@@ -338,18 +348,14 @@ class WebSearchService:
             if isinstance(r, dict) and r.get("content")
         ]
 
-    def _tavily_search_raw(self, query: str) -> List[Dict]:
-        """Access the underlying Tavily search tool directly."""
-        if not tavily_search._ensure_initialized():
+    def _search_raw(self, query: str, max_results: int = 10) -> List[Dict]:
+        """Execute raw DuckDuckGo search."""
+        if not duckduckgo_search.is_available:
             return []
         try:
-            results = tavily_search.search_tool.invoke({"query": query})
-            if isinstance(results, dict):
-                return results.get("results", [])
-            if isinstance(results, list):
-                return results
+            return duckduckgo_search._search_web(query, max_results=max_results)
         except Exception as exc:
-            logger.warning(f"Tavily raw search failed for '{query[:60]}': {exc}")
+            logger.warning(f"DDG raw search failed for '{query[:60]}': {exc}")
         return []
 
     @staticmethod

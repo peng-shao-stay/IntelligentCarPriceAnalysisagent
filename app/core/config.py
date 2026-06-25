@@ -79,8 +79,6 @@ if BaseSettings is not None:
         REQUEST_TIMEOUT: int = 30
         MAX_RETRIES: int = 3
 
-        TAVILY_API_KEY: Optional[str] = None
-
         ALLOWED_ORIGINS: List[str] = ["*"]
 
         class Config:
@@ -122,8 +120,6 @@ else:
 
             self.REQUEST_TIMEOUT = _get_int("REQUEST_TIMEOUT", 30)
             self.MAX_RETRIES = _get_int("MAX_RETRIES", 3)
-
-            self.TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
             self.ALLOWED_ORIGINS = _get_list("ALLOWED_ORIGINS", ["*"])
 
