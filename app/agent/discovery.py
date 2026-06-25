@@ -40,7 +40,7 @@ def _load_mcp_configs_from_db(db) -> List[MCPServerConfig]:
         .all()
     )
 
-    configs = [MCPServerConfig.from_orm(row) for row in rows]
+    configs = [MCPServerConfig.model_validate(row) for row in rows]
 
     logger.info(f"[Discovery] Loaded {len(configs)} MCP server configs from DB")
     return configs

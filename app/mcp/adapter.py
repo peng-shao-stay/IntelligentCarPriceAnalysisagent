@@ -50,7 +50,7 @@ class MCPConfigService:
 
         configs: List[MCPServerConfig] = []
         for row in rows:
-            config = MCPServerConfig.from_orm(row)
+            config = MCPServerConfig.model_validate(row)
             configs.append(config)
             self._configs[config.name] = config
 

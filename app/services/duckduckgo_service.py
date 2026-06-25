@@ -74,7 +74,7 @@ class DuckDuckGoSearchService:
             logger.info(f"DuckDuckGo search: '{query[:60]}' → {len(raw)} results")
             return raw
         except Exception:
-            logger.debug(f"DuckDuckGo search failed for '{query[:60]}'")
+            logger.warning(f"DuckDuckGo search failed for '{query[:60]}'")
             return []
 
     # ── Result parsers ─────────────────────────────────────────

@@ -132,8 +132,8 @@ def chat(
         logger.info(f"Chat completed for session {session_id}")
         return ChatResponse(
             session_id=session_id,
-            user_message=MessageResponse.from_orm(user_message),
-            assistant_message=MessageResponse.from_orm(assistant_message),
+            user_message=MessageResponse.model_validate(user_message),
+            assistant_message=MessageResponse.model_validate(assistant_message),
         )
 
     except HTTPException:
@@ -164,7 +164,7 @@ def get_sessions(
             .limit(limit)
             .all()
         )
-        return [ChatSessionResponse.from_orm(s) for s in sessions]
+        return [ChatSessionResponse.model_validate(s) for s in sessions]
     except Exception as e:
         logger.error(f"Get sessions error: {str(e)}")
         raise HTTPException(status_code=500, detail="服务暂时不可用，请稍后重试")
@@ -205,8 +205,8 @@ def get_session_history(
             .all()
         )
         return ChatHistoryResponse(
-            session=ChatSessionResponse.from_orm(session),
-            messages=[MessageResponse.from_orm(msg) for msg in messages],
+            session=ChatSessionResponse.model_validate(session),
+            messages=[MessageResponse.model_validate(msg) for msg in messages],
         )
     except HTTPException:
         raise

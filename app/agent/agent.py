@@ -492,6 +492,7 @@ class AutoMindAgent:
         web_search_enabled = getattr(_request_local, 'web_search_enabled', False)
 
         search_results_text = ""
+        web_search_failed = False
         if web_search_enabled:
             try:
                 search_results = self.providers.search.search_general(message, max_results=5)
@@ -506,8 +507,11 @@ class AutoMindAgent:
                         )
                     search_results_text = "\n".join(parts)
                     logger.info(f"General chat with web search: {len(search_results)} results")
+                else:
+                    web_search_failed = True
             except Exception as exc:
                 logger.warning(f"Web search for general chat failed: {exc}")
+                web_search_failed = True
 
         if search_results_text:
             prompt = GENERAL_CHAT_WITH_SEARCH_PROMPT.format(
@@ -527,7 +531,10 @@ class AutoMindAgent:
         else:
             messages = [{"role": "user", "content": prompt}]
 
-        return self.llm_service.chat(messages=messages, system_prompt=self.system_prompt)
+        reply = self.llm_service.chat(messages=messages, system_prompt=self.system_prompt)
+        if web_search_failed:
+            reply = "> ⚠️ 联网搜索暂时不可用，以下回答基于 AI 模型训练知识生成。\n\n" + reply
+        return reply
 
 
 # ═══════════════════════════════════════════════════════════════

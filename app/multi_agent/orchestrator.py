@@ -121,7 +121,10 @@ class OrchestratorAgent(BaseAgent):
             f"Orchestrator: no search data for intent={intent.value}, "
             f"falling back to general chat"
         )
-        return self._handle_general(message, history, web_search)
+        reply = self._handle_general(message, history, web_search)
+        if web_search:
+            reply = "> ⚠️ 联网搜索暂时不可用，以下回答基于 AI 模型训练知识生成。\n\n" + reply
+        return reply
 
     def _detect_intent(self, message: str):
         from app.agent.agent import Intent
@@ -170,17 +173,26 @@ class OrchestratorAgent(BaseAgent):
 
     def _handle_general(self, message: str, history: List[Dict], web_search: bool) -> str:
         search_text = ""
+        web_search_failed = False
         if web_search:
             r = self.searcher.search_general(message)
             if r:
                 items = r.data if isinstance(r.data, list) else []
-                search_text = "\n".join(
-                    f"[{i}] {it.get('title', '')}\n内容: {(it.get('content', '') or '')[:300]}"
-                    for i, it in enumerate(items[:3], 1)
-                )
+                if items:
+                    search_text = "\n".join(
+                        f"[{i}] {it.get('title', '')}\n内容: {(it.get('content', '') or '')[:300]}"
+                        for i, it in enumerate(items[:3], 1)
+                    )
+                else:
+                    web_search_failed = True
+            else:
+                web_search_failed = True
         r = self.writer.generate_general_chat(message, history, search_text)
         if r is not None and r.success:
-            return r.data.get("report", "")
+            reply = r.data.get("report", "")
+            if web_search_failed:
+                reply = "> ⚠️ 联网搜索暂时不可用，以下回答基于 AI 模型训练知识生成。\n\n" + reply
+            return reply
         err = r.error if r is not None else "Writer 返回空"
         logger.warning(f"Orchestrator: General chat Writer failed, error={err}")
         return f"抱歉，AI 模型暂时不可用。（原因：{err}）"

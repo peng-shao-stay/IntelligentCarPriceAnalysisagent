@@ -122,7 +122,7 @@ class MCPServerConfig:
     config_id: Optional[int] = None
 
     @classmethod
-    def from_orm(cls, row) -> "MCPServerConfig":
+    def model_validate(cls, row) -> "MCPServerConfig":
         """Convert an ORM model row to a runtime MCPServerConfig."""
         return cls(
             config_id=row.id,

@@ -208,7 +208,7 @@ def test_connection(server_id: int, db: Session = Depends(get_db)):
 
     start = time.perf_counter()
 
-    config = MCPServerConfig.from_orm(server)
+    config = MCPServerConfig.model_validate(server)
     client = MCPClient(config)
 
     try:
@@ -296,7 +296,7 @@ def discover_tools(server_id: int, db: Session = Depends(get_db)):
     if not server:
         raise HTTPException(status_code=404, detail="MCP server config not found")
 
-    config = MCPServerConfig.from_orm(server)
+    config = MCPServerConfig.model_validate(server)
     client = MCPClient(config)
 
     try:

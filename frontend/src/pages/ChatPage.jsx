@@ -152,7 +152,7 @@ function ChatPage() {
                 onChange={setWebSearchEnabled}
                 checkedChildren={<><GlobalOutlined /> 联网</>}
                 unCheckedChildren="本地"
-                style={{ minWidth: 72 }}
+                style={{ minWidth: 88 }}
               />
               <Button
                 type="primary"
