@@ -10,9 +10,12 @@ from app.core.config import settings
 from app.core.logging import logger
 
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
 except ImportError:
-    DDGS = None
+    try:
+        from duckduckgo_search import DDGS  # legacy package
+    except ImportError:
+        DDGS = None
 
 
 class DuckDuckGoSearchService:
@@ -27,7 +30,7 @@ class DuckDuckGoSearchService:
 
     def _get_client(self) -> DDGS:
         if self._ddgs is None:
-            proxy = getattr(settings, "DDG_PROXY", None) or None
+            proxy = settings.DDG_PROXY
             self._ddgs = DDGS(proxy=proxy)
         return self._ddgs
 

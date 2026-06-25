@@ -61,6 +61,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-3600}
 
+      # --- 网络代理 ---
+      DDG_PROXY: ${DDG_PROXY:-}
+
       # --- API 密钥 ---
       API_KEY: ${API_KEY}
 
