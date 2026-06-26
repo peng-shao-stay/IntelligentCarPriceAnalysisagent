@@ -278,5 +278,27 @@ def extract_car_info_from_text(text: str) -> dict:
     return {"brand": brand, "model": model}
 
 
+def extract_domain(url: str, strip_www: bool = True) -> str:
+    """Extract the domain (netloc) from a URL, lowercased.
+
+    Args:
+        url: URL string.
+        strip_www: If True, remove leading 'www.' prefix.
+
+    Returns:
+        Lowercased domain string, or empty string on parse failure.
+    """
+    if not url:
+        return ""
+    try:
+        from urllib.parse import urlparse
+        domain = (urlparse(url).netloc or "").lower()
+        if strip_www and domain.startswith("www."):
+            domain = domain[4:]
+        return domain
+    except Exception:
+        return ""
+
+
 # Internal helpers re-exported for code that imports them directly
 _SENTENCE_END_RE = __import__('re').compile(r'(?<=[。！？；.!?])\s*')

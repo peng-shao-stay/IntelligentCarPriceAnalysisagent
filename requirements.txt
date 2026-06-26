@@ -28,8 +28,8 @@ python-dotenv>=1.0.0
 tabulate>=0.9.0  # 表格美化
 Pillow>=10.0.0  # 图片处理（验证码生成）
 
-# 搜索
-ddgs>=9.0.0
+# 搜索（Serper.dev Google Search API）
+# ddgs>=9.0.0  # 已弃用，改用 Serper
 
 # 爬虫相关
 beautifulsoup4>=4.12.0

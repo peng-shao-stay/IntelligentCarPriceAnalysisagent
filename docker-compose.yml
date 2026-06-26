@@ -61,8 +61,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       REDIS_CACHE_TTL: ${REDIS_CACHE_TTL:-3600}
 
-      # --- 网络代理 ---
-      DDG_PROXY: ${DDG_PROXY:-}
+      # --- 网络搜索（Tavily API）---
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
 
       # --- API 密钥 ---
       API_KEY: ${API_KEY}

@@ -12,7 +12,7 @@ from typing import Optional
 from app.core.logging import logger
 from app.providers.base import DatabaseProvider, SearchProvider, VectorProvider
 from app.providers.database import PostgresDatabaseProvider
-from app.providers.search import DuckDuckGoSearchProvider
+from app.providers.search import TavilySearchProvider
 from app.providers.vector import RAGVectorProvider
 
 
@@ -38,8 +38,8 @@ class ProviderRegistry:
     @property
     def search(self) -> SearchProvider:
         if self._search is None:
-            logger.info("[ProviderRegistry] Lazy-init DuckDuckGoSearchProvider")
-            self._search = DuckDuckGoSearchProvider()
+            logger.info("[ProviderRegistry] Lazy-init TavilySearchProvider")
+            self._search = TavilySearchProvider()
         return self._search
 
     @property

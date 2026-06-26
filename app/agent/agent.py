@@ -123,9 +123,7 @@ class AutoMindAgent:
         for t in tools:
             lines.append(f"- **{t.name}**: {t.description}")
         lines.append("")
-        lines.append("使用规则：")
-        lines.append("1. 根据用户问题选择最合适的工具")
-        lines.append("2. 一次只使用一个工具，不要同时调用多个")
+        lines.append("使用规则：根据用户问题选择最合适的工具")
 
         return "\n".join(lines)
 
@@ -160,20 +158,38 @@ class AutoMindAgent:
     # ── Main entry ────────────────────────────────────────────
 
     def process_message(self, message: str, history: List[Dict] = None, web_search: bool = False, db=None) -> str:
-        """Process a user message using the multi-agent orchestration pipeline."""
+        """Process a user message.
+
+        Two paths:
+          1. Tool Calling (function calling) — LLM decides: web search, RAG, or direct answer
+          2. Pipeline fallback — keyword intent + orchestrator for older flow
+        """
         history = history or []
         _request_local.web_search_enabled = web_search
 
         try:
+            # ── Path 1: Function Calling (LLM chooses tools) ──
+            if getattr(self.llm_service, "is_available", False):
+                try:
+                    return self._process_with_function_calling(
+                        message=message,
+                        history=history,
+                        web_search=web_search,
+                        db=db,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"Function calling path failed ({exc}), falling back to pipeline"
+                    )
+
+            # ── Path 2: Pipeline fallback ──
             intent = self._detect_intent(message)
 
-            # Early: CAR_PRICE with missing brand/model → ask for clarification
             if intent == Intent.CAR_PRICE:
                 car_info = extract_car_info(message)
                 if not car_info.get("brand") or not car_info.get("model"):
                     return _MISSING_CAR_INFO_MSG
 
-            # Use OrchestratorAgent pipeline when LLM is available
             if getattr(self.llm_service, "is_available", False):
                 from app.multi_agent.orchestrator import OrchestratorAgent
                 orchestrator = OrchestratorAgent(
@@ -188,7 +204,6 @@ class AutoMindAgent:
                     db=db,
                 )
 
-            # Fallback: direct tool execution (no LLM)
             tool = self.tool_registry.get_by_intent(intent)
             if tool is not None:
                 tool_result = self.tool_registry.execute(intent, message, history)
@@ -206,6 +221,63 @@ class AutoMindAgent:
         except Exception:
             logger.exception("Error processing message")
             return "抱歉，处理你的请求时出现了一些问题，请稍后再试。"
+
+    def _process_with_function_calling(
+        self,
+        message: str,
+        history: List[Dict] = None,
+        web_search: bool = False,
+        db=None,
+    ) -> str:
+        """Use LLM function calling to decide and execute tools.
+
+        The LLM autonomously chooses between:
+          - get_web_data(query)    → Tavily web search
+          - search_knowledge(query) → RAG knowledge base
+          - direct answer
+
+        When the LLM doesn't support function calling (e.g. small local models
+        like qwen3.5), we auto-execute the search and inject results into the
+        prompt so the user still gets real-time data.
+        """
+        from app.agent.tool_calling import ToolCallingAgent
+
+        db_factory = None
+        if (
+            self.providers is not None
+            and getattr(self.providers, 'database', None) is not None
+        ):
+            db_factory = self.providers.database.create_session
+
+        calling_agent = ToolCallingAgent(
+            llm_service=self.llm_service,
+            db_session_factory=db_factory,
+        )
+
+        result = calling_agent.process(
+            message=message,
+            history=history,
+            web_search_enabled=web_search,
+        )
+
+        reply = result.get("reply", "")
+        called = result.get("tool_calls", [])
+
+        if called:
+            names = [c.get("name", "?") for c in called]
+            logger.info(f"Function calling used tools: {names}")
+            return reply
+
+        # ── LLM didn't call any tools ─────────────────────────
+        # Two possibilities:
+        #   a) The question doesn't need search → reply is fine as-is
+        #   b) The model doesn't support function calling but web_search is ON
+        #      → delegate to _handle_general_chat which does search + inject + respond
+        if web_search and not called:
+            logger.info("Function calling: no tools called; delegating to _handle_general_chat")
+            return self._handle_general_chat(message, history)
+
+        return reply
 
     # ── Intent detection ──────────────────────────────────────
 

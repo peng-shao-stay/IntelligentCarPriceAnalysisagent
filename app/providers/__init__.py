@@ -11,7 +11,7 @@ Architecture:
        ▼
   ProviderRegistry  ──  lazy singleton, supports DI for testing
        │
-       ├── SearchProvider    ──  DuckDuckGoSearchProvider   (web search)
+       ├── SearchProvider    ──  SerperSearchProvider      (Google via Serper.dev)
        ├── VectorProvider    ──  RAGVectorProvider      (semantic / RAG search)
        └── DatabaseProvider  ──  PostgresDatabaseProvider (DB sessions)
 
@@ -39,7 +39,7 @@ Migration from old Tool Calling:
 from app.providers.base import DatabaseProvider, SearchProvider, VectorProvider
 from app.providers.database import PostgresDatabaseProvider
 from app.providers.registry import ProviderRegistry, get_provider_registry, reset_provider_registry
-from app.providers.search import DuckDuckGoSearchProvider
+from app.providers.search import TavilySearchProvider
 from app.providers.vector import RAGVectorProvider
 
 __all__ = [
@@ -48,7 +48,7 @@ __all__ = [
     "VectorProvider",
     "DatabaseProvider",
     # Implementations
-    "DuckDuckGoSearchProvider",
+    "TavilySearchProvider",
     "RAGVectorProvider",
     "PostgresDatabaseProvider",
     # Registry

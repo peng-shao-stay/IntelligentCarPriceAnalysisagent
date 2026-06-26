@@ -7,7 +7,7 @@ Provider interfaces that the Agent already depends on.
 Flow:
   DB (mcp_server_configs) → MCPServerConfig → MCPClient → Provider interface
 
-Essential servers (like DuckDuckGo) remain direct Provider implementations.
+Essential servers (like Serper Search) remain direct Provider implementations.
 Non-essential servers can be managed via MCP from the frontend.
 """
 

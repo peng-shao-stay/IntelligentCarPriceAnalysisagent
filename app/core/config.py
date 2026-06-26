@@ -79,13 +79,14 @@ if BaseSettings is not None:
         REQUEST_TIMEOUT: int = 30
         MAX_RETRIES: int = 3
 
-        DDG_PROXY: Optional[str] = None
+        TAVILY_API_KEY: Optional[str] = None
 
         ALLOWED_ORIGINS: List[str] = ["*"]
 
         class Config:
             env_file = ".env"
             case_sensitive = True
+            extra = "ignore"
 else:
     class Settings:
         """Lightweight fallback when pydantic-settings is unavailable."""
@@ -123,7 +124,7 @@ else:
             self.REQUEST_TIMEOUT = _get_int("REQUEST_TIMEOUT", 30)
             self.MAX_RETRIES = _get_int("MAX_RETRIES", 3)
 
-            self.DDG_PROXY = os.getenv("DDG_PROXY") or None
+            self.TAVILY_API_KEY = os.getenv("TAVILY_API_KEY") or None
 
             self.ALLOWED_ORIGINS = _get_list("ALLOWED_ORIGINS", ["*"])
 
